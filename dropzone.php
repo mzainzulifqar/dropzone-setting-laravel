@@ -12,7 +12,7 @@ type="text/css" />
 
 
 <!-- Controller Code -->
-public function store(Request $request, MessageBag $message_bag)
+public function store(Request $request)
 {
 	if ($files = $request->file('files'))
 	{
@@ -22,7 +22,7 @@ public function store(Request $request, MessageBag $message_bag)
 			{
 				$name = $file[$i][$i]->getClientOriginalExtension();
 				$realName = basename($file[$i][$i]->getClientOriginalName(), '.'.$file[$i][$i]->getClientOriginalExtension()) . uniqid() . 'media' . '.' . $name;
-				$file[$i][$i]->move(public_path('clients/gallery'), $realName);
+				$file[$i][$i]->move(public_path('clients/gallery'), $realName);  //put ur directory where u want to save file
 				$media[] = ['media' => $realName, 'ext' => $name];
 			}
 		}
@@ -48,14 +48,14 @@ var fileList = new Array;
 var i = 0;
 $(function(){
     uploader = new Dropzone(".dropzone",{
-        url: "media",
-        paramName : "files[]",
+        url: "media",  //put ur upload url without domain it must be POST url
+        paramName : "files[]", //if single file then "files"
         uploadMultiple :true,
         acceptedFiles: ".jpeg,.jpg,.png,.gif,.pdf,.json",
         addRemoveLinks: true,
         forceFallback: false,
         maxFilesize: 10, // Set the maximum file size to 256 MB
-        parallelUploads: 1,
+        parallelUploads: 1, //if u want to uplaod multiple files in one request
     });//end drop zone
     uploader.on("success", function(file,response) {
         imageDataArray.push(response)
@@ -64,7 +64,8 @@ $(function(){
             "fileName": file.name,
             "fileId": i
         };
-   
+            // here u can append file name's to any input field in any form
+            //or whatever u want to do
         i += 1;
         $('#item_images').val(imageDataArray);
     });
@@ -79,7 +80,7 @@ $(function(){
                 rmvFile = fileList[f].serverFileName;
                 // get request to remove the uploaded file from server
                 
-                $.get( "media/" +  rmvFile  + '/edit' )
+                $.get( "media/" +  rmvFile  + '/edit' )  //must be a guest request then in controller perform specific delete actions
                   .done(function( data ) {
                     //console.log(data)
                   });
@@ -92,3 +93,22 @@ $(function(){
     });
 });
 </script>
+
+<!-- Delete function in controller should be look like -->
+
+public function delete($name) //we are sending file name here
+{
+
+    $name = json_decode($id);  //bcz dropzone json-encoded it
+
+    $media = Media::where('media', $name ?? $id)->firstOrFail(); //find it in ur DB if u save it
+
+    if (file_exists(public_path('clients/gallery/' . $media->media))) //check if the file exist in directory
+    {
+        unlink(public_path('clients/gallery/' . $media->media)); //delete the file from directory
+    }
+
+    if ($media->delete() && $name == null) //delete it from DB if u save it....
+    {
+        return 'all good'; //return back;
+    }
